@@ -537,7 +537,7 @@ function authShellHTML(){
   const mode = state.authMode;
   const isSignup = mode==='signup';
   return `
-  <div class="auth-shell" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+  <div class="auth-shell" style="width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
     <div class="card card-pad" style="width:100%;max-width:380px">
       <div class="brand" style="border-bottom:none;padding:0 0 18px">
         <div class="brand-mark">QC</div>
@@ -565,7 +565,7 @@ function authShellHTML(){
 
 function pendingApprovalHTML(){
   return `
-  <div class="auth-shell" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+  <div class="auth-shell" style="width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
     <div class="card card-pad" style="width:100%;max-width:380px;text-align:center">
       <div class="brand" style="border-bottom:none;padding:0 0 18px;justify-content:center">
         <div class="brand-mark">QC</div>
