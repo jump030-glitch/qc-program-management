@@ -42,6 +42,18 @@ const ICONS = {
 const I18N = {
   en:{
     appName:'QC Management', appTag:'INSPECTION CONSOLE',
+    auth:{
+      loginTitle:'Sign in', signupTitle:'Create account',
+      email:'Email', password:'Password', emailPh:'you@example.com', passwordPh:'••••••••',
+      loginBtn:'Sign in', signupBtn:'Create account', busy:'Please wait…',
+      noAccount:'Need an account?', haveAccount:'Already have an account?',
+      switchToSignup:'Sign up', switchToLogin:'Sign in',
+      logout:'Sign out',
+      genericError:'Something went wrong. Please try again.',
+      signupDone:'Account created. Check your email if confirmation is required, then sign in.',
+      pendingTitle:'Waiting for approval', pendingBody:'Your account has been created but is not active yet. Please ask an admin to activate your access.',
+      required:'Email and password are required.',
+    },
     nav:{ groupOverview:'Overview', groupOps:'QC Operations', groupSystem:'System',
       dashboard:'Dashboard', records:'QC Records', testers:'Testers', statuses:'Program Statuses',
       systems:'Systems', reports:'QC Report', data:'Export / Import', backup:'Backup Database' },
@@ -98,6 +110,7 @@ const I18N = {
       copyFormatted:'Copy Formatted Email', htmlHint:'Paste (Ctrl+V) directly into a Gmail or Outlook compose window — the table, colors and any attached photos come through formatted.' },
     tester:{ addTitle:'Add Tester', editTitle:'Edit Tester', name:'Tester Name', username:'Username / Employee ID',
       email:'Email', role:'Role', department:'Department', status:'Status', addBtn:'Add Tester',
+      accessRole:'Access Level', accessRoleAdmin:'Admin', accessRoleTester:'Tester',
       searchPh:'Search testers…', empty:'No testers found', emptySub:'Add a tester or adjust your search.',
       col:{name:'Name', username:'Username / Employee ID', email:'Email', role:'Role', dept:'Department', status:'Status', notes:'Notes', actions:'Actions'} },
     status:{ addTitle:'Add Status', editTitle:'Edit Status', label:'Label', desc:'Description', color:'Color',
@@ -156,6 +169,18 @@ const I18N = {
   },
   th:{
     appName:'ระบบบริหารจัดการ QC', appTag:'ศูนย์ตรวจสอบคุณภาพ',
+    auth:{
+      loginTitle:'เข้าสู่ระบบ', signupTitle:'สมัครสมาชิก',
+      email:'อีเมล', password:'รหัสผ่าน', emailPh:'you@example.com', passwordPh:'••••••••',
+      loginBtn:'เข้าสู่ระบบ', signupBtn:'สมัครสมาชิก', busy:'กรุณารอสักครู่…',
+      noAccount:'ยังไม่มีบัญชี?', haveAccount:'มีบัญชีอยู่แล้ว?',
+      switchToSignup:'สมัครสมาชิก', switchToLogin:'เข้าสู่ระบบ',
+      logout:'ออกจากระบบ',
+      genericError:'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
+      signupDone:'สร้างบัญชีสำเร็จ กรุณายืนยันอีเมล (ถ้าจำเป็น) แล้วเข้าสู่ระบบ',
+      pendingTitle:'รอการอนุมัติ', pendingBody:'สร้างบัญชีของคุณแล้ว แต่ยังไม่เปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดสิทธิ์การใช้งาน',
+      required:'กรุณากรอกอีเมลและรหัสผ่าน',
+    },
     nav:{ groupOverview:'ภาพรวม', groupOps:'งาน QC', groupSystem:'ระบบ',
       dashboard:'แดชบอร์ด', records:'รายการ QC', testers:'ผู้ทดสอบ', statuses:'สถานะโปรแกรม',
       systems:'ระบบงาน', reports:'รายงาน QC', data:'นำเข้า / ส่งออก', backup:'สำรองข้อมูล' },
@@ -211,7 +236,7 @@ const I18N = {
       format:'รูปแบบ', formatHtml:'HTML สวยงาม (ตาราง + รูปภาพ)', formatPlain:'ข้อความธรรมดา',
       copyFormatted:'คัดลอกอีเมลจัดรูปแบบแล้ว', htmlHint:'วาง (Ctrl+V) ลงในหน้าต่างเขียนอีเมลของ Gmail หรือ Outlook ได้เลย ตาราง สี และรูปภาพที่แนบจะติดไปด้วย' },
     tester:{ addTitle:'เพิ่มผู้ทดสอบ', editTitle:'แก้ไขผู้ทดสอบ', name:'ชื่อผู้ทดสอบ', username:'ชื่อผู้ใช้ / รหัสพนักงาน',
-      email:'อีเมล', role:'บทบาท', department:'แผนก', status:'สถานะ', addBtn:'เพิ่มผู้ทดสอบ',
+      email:'อีเมล', role:'บทบาท', accessRole:'ระดับสิทธิ์', accessRoleAdmin:'ผู้ดูแลระบบ', accessRoleTester:'ผู้ทดสอบ', department:'แผนก', status:'สถานะ', addBtn:'เพิ่มผู้ทดสอบ',
       searchPh:'ค้นหาผู้ทดสอบ…', empty:'ไม่พบผู้ทดสอบ', emptySub:'เพิ่มผู้ทดสอบ หรือปรับคำค้นหา',
       col:{name:'ชื่อ', username:'ชื่อผู้ใช้ / รหัสพนักงาน', email:'อีเมล', role:'บทบาท', dept:'แผนก', status:'สถานะ', notes:'หมายเหตุ', actions:'การจัดการ'} },
     status:{ addTitle:'เพิ่มสถานะ', editTitle:'แก้ไขสถานะ', label:'ชื่อสถานะ', desc:'คำอธิบาย', color:'สี',
@@ -478,6 +503,82 @@ function initSupabaseClient(){
   }catch(e){ return null; }
 }
 
+/* ---------------- Auth (Supabase Auth: email/password) ----------------
+   Two access levels, resolved by matching the signed-in auth user's email
+   against the `testers` table: 'admin' (accessRole==='admin' && active),
+   'tester' (any other active tester row), or 'pending' (no matching row,
+   or a matching row that isn't active yet — awaiting admin approval). */
+function resolveAccessForSession(session){
+  if(!session || !session.user){ state.currentTester=null; state.accessRole=null; return; }
+  const email = (session.user.email||'').toLowerCase();
+  const match = state.testers.find(x=>x.email && x.email.toLowerCase()===email);
+  state.currentTester = match || null;
+  if(!match || !match.active) state.accessRole = 'pending';
+  else state.accessRole = match.accessRole==='admin' ? 'admin' : 'tester';
+}
+async function ensureTesterStubExists(session){
+  if(!session || !session.user || !supa) return;
+  const email = (session.user.email||'').toLowerCase();
+  if(state.testers.some(x=>x.email && x.email.toLowerCase()===email)) return;
+  const id = 'T'+String(state.testers.length+1).padStart(3,'0')+Math.random().toString(36).slice(2,4);
+  const stub = { id, name:'', username:session.user.email||'', email:session.user.email||'', role:'', accessRole:'tester', department:'', active:false, notes:'' };
+  state.testers.push(stub);
+  try{ await supa.from('testers').insert(testerToRow(stub)); }
+  catch(e){ console.warn('Could not register tester stub:', e && e.message); }
+  resolveAccessForSession(session);
+}
+async function pushTesterStatusUpdate(recordId, status){
+  if(!supa) return { error:new Error('offline') };
+  try{ const { error } = await supa.from('qc_records').update({status}).eq('id', recordId); return { error }; }
+  catch(e){ return { error:e }; }
+}
+
+function authShellHTML(){
+  const mode = state.authMode;
+  const isSignup = mode==='signup';
+  return `
+  <div class="auth-shell" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+    <div class="card card-pad" style="width:100%;max-width:380px">
+      <div class="brand" style="border-bottom:none;padding:0 0 18px">
+        <div class="brand-mark">QC</div>
+        <div class="brand-text"><b>${esc(t('appName'))}</b><span>${esc(t('appTag'))}</span></div>
+      </div>
+      <h2 style="margin:0 0 4px">${esc(isSignup? t('auth.signupTitle') : t('auth.loginTitle'))}</h2>
+      <div id="auth-form" style="margin-top:14px">
+        <div class="form-grid">
+          <div class="form-field full"><label>${esc(t('auth.email'))}</label><input type="email" name="email" id="auth-email" placeholder="${esc(t('auth.emailPh'))}" value="${esc(state.authEmail||'')}"></div>
+          <div class="form-field full"><label>${esc(t('auth.password'))}</label><input type="password" name="password" id="auth-password" placeholder="${esc(t('auth.passwordPh'))}"></div>
+        </div>
+        ${state.authError? `<div class="form-hint" style="color:var(--danger);margin-top:6px">${esc(state.authError)}</div>` : ''}
+        <button type="button" class="btn btn-primary btn-block" style="margin-top:14px" data-action="${isSignup?'submit-signup':'submit-login'}" ${state.authBusy?'disabled':''}>
+          ${state.authBusy? esc(t('auth.busy')) : esc(isSignup? t('auth.signupBtn') : t('auth.loginBtn'))}
+        </button>
+        <div style="margin-top:14px;text-align:center;font-size:13px;color:var(--text-muted)">
+          ${esc(isSignup? t('auth.haveAccount') : t('auth.noAccount'))}
+          <a href="#" data-action="toggle-auth-mode" style="margin-left:4px">${esc(isSignup? t('auth.switchToLogin') : t('auth.switchToSignup'))}</a>
+        </div>
+      </div>
+    </div>
+    <div class="toast-stack" id="toast-stack"></div>
+  </div>`;
+}
+
+function pendingApprovalHTML(){
+  return `
+  <div class="auth-shell" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+    <div class="card card-pad" style="width:100%;max-width:380px;text-align:center">
+      <div class="brand" style="border-bottom:none;padding:0 0 18px;justify-content:center">
+        <div class="brand-mark">QC</div>
+        <div class="brand-text"><b>${esc(t('appName'))}</b><span>${esc(t('appTag'))}</span></div>
+      </div>
+      <h2 style="margin:0 0 8px">${esc(t('auth.pendingTitle'))}</h2>
+      <p style="color:var(--text-muted);font-size:13.5px;margin:0 0 18px">${esc(t('auth.pendingBody'))}</p>
+      <button type="button" class="btn btn-block" data-action="logout">${esc(t('auth.logout'))}</button>
+    </div>
+    <div class="toast-stack" id="toast-stack"></div>
+  </div>`;
+}
+
 /* ---- row <-> app-state shape transforms ---- */
 function recordToRow(r){
   return {
@@ -498,10 +599,10 @@ function rowToRecord(row){
   };
 }
 function testerToRow(t){
-  return { id:t.id, name:t.name||null, username:t.username||null, email:t.email||null, role:t.role||null, department:t.department||null, active: !!t.active, notes:t.notes||null };
+  return { id:t.id, name:t.name||null, username:t.username||null, email:t.email||null, role:t.role||null, access_role:t.accessRole||'tester', department:t.department||null, active: !!t.active, notes:t.notes||null };
 }
 function rowToTester(row){
-  return { id:row.id, name:row.name||'', username:row.username||'', email:row.email||'', role:row.role||'', department:row.department||'', active: !!row.active, notes:row.notes||'' };
+  return { id:row.id, name:row.name||'', username:row.username||'', email:row.email||'', role:row.role||'', accessRole:row.access_role||'tester', department:row.department||'', active: !!row.active, notes:row.notes||'' };
 }
 function statusToRow(s, idx){
   return { id:s.id, label:s.label||null, label_th:s.th||null, description:s.desc||null, description_th:s.descTh||null, color:s.color||null, custom_color:s.customColor||null, sort_order: idx };
@@ -601,6 +702,32 @@ function subscribeRealtime(){
     .on('postgres_changes', {event:'*', schema:'public', table:'systems'}, handleRealtimeSystems)
     .on('postgres_changes', {event:'*', schema:'public', table:'sub_systems'}, handleRealtimeSubSystems)
     .subscribe();
+}
+
+/* ---- pull shared data once a session is established; scoped automatically
+   by RLS (admins see everything, testers see only their own records). ---- */
+async function loadSharedDataForCurrentSession(){
+  if(!supa || !state.session) return;
+  try{
+    if(state.accessRole==='admin') await supaSeedIfEmpty();
+    const remote = await supaPullAll();
+    state.records = remote.records;
+    state.testers = remote.testers;
+    state.statuses = remote.statuses.length ? remote.statuses : state.statuses;
+    state.systems = remote.systems;
+    resolveAccessForSession(state.session);
+    state.nextSeq = Math.max(state.nextSeq, computeNextSeq(state.records));
+    lastSyncedIds.qc_records = new Set(state.records.map(r=>r.id));
+    lastSyncedIds.testers = new Set(state.testers.map(t=>t.id));
+    lastSyncedIds.statuses = new Set(state.statuses.map(s=>s.id));
+    lastSyncedIds.systems = new Set(state.systems.map(s=>s.id));
+    lastSyncedIds.sub_systems = new Set(state.systems.flatMap(s=>s.subs.map(x=>x.id)));
+    lastPushedSnapshot = snapshotOfSharedState();
+    state.syncMode = 'online';
+    subscribeRealtime();
+  }catch(e){
+    console.warn('Supabase data load failed (staying on last-known data):', e && e.message);
+  }
 }
 function markInSyncAndRender(){
   lastPushedSnapshot = snapshotOfSharedState(); // this state now matches the server — don't echo it back
@@ -752,7 +879,7 @@ function statusLabel(s){ return state.lang==='th' ? (s.th||s.label) : s.label; }
 function statusDesc(s){ return state.lang==='th' ? (s.descTh||s.desc||'') : (s.desc||''); }
 
 const DEFAULT_RECORDS = [{"id": "QC-2026-0055", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "รายงานแดชบอร์ด", "programName": "web-ckn-dashboard", "version": "1.0.22", "issueDescription": "รายงานแดชบอร์ด เพิ่มการ์ดแสดงข้อมูลจำนวนสมาชิก ณ ปัจจุบัน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Dashboard, API Dashboard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-17", "reportedTime": "08:26", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0054", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "web-ckn-manage", "version": "1.0.74", "issueDescription": "หน้าผู้รับผลประโยชน์ เพิ่มการแสดงแจ้งเตือนกรณีไม่มีสิทธิ์ linkage", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-17", "reportedTime": "08:24", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0053", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบเครื่องราชฯ", "programName": "api-insignia", "version": "1.0.41", "issueDescription": "แก้ไข รายงานถอดถอนชื่อ ความผิดอาญา ไม่แสดงพฤติการณ์", "issueType": "edit", "status": "installed", "relatedApps": "API Insignia", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-16", "reportedTime": "11:33", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0052", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบเครื่องราชฯ", "programName": "web-insignia", "version": "1.0.41", "issueDescription": "แก้ไข list ปี ระบบเครื่องราชฯ", "issueType": "edit", "status": "installed", "relatedApps": "Web Insignia", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-15", "reportedTime": "16:19", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0051", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "web-ckn-manage", "version": "1.0.73", "issueDescription": "ระบบตรวจสอบสถานะการเป็นสมาชิก แสดงข้อมูลหลังกดปุ่มกลับ", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-15", "reportedTime": "16:14", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0050", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบเครื่องราชฯ", "programName": "web-insignia", "version": "1.0.40", "issueDescription": "แก้ไขโปรแกรม ขอถอดถอนรายชื่อ ผู้ได้รับเครื่องราชฯ", "issueType": "edit", "status": "installed", "relatedApps": "Web Insignia", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-15", "reportedTime": "12:58", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0049", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร", "programName": "web-printcard", "version": "1.2.11", "issueDescription": "พิมพ์ซ่อมบัตรเจ้าหน้าที่ แก้ไขวันที่พิมพ์ให้ได้ล่วงหน้า 7 วัน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-14", "reportedTime": "09:41", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0048", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "web-ckn-signup", "version": "1.0.18", "issueDescription": "ลบการอัปโหลดเอกสารการชำระเงินสงเคราะห์ล่วงหน้า", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-14", "reportedTime": "09:40", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0047", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "บันทึกข้อมูลคณะกรรมการหมู่บ้าน", "programName": "web-committee", "version": "1.0.15", "issueDescription": "แก้ไขวันที่ครบวาระไม่แสดง", "issueType": "edit", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-10", "reportedTime": "08:48", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0046", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "บันทึกข้อมูลคณะกรรมการหมู่บ้าน", "programName": "web-committee", "version": "1.0.15", "issueDescription": "แก้ไขวันที่ครบวาระไม่แสดง [ผิดระบบ]", "issueType": "edit", "status": "cancelled", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-10", "reportedTime": "08:41", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0045", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "บันทึกข้อมูลคณะกรรมการหมู่บ้าน", "programName": "web-committee", "version": "1.0.15", "issueDescription": "แก้ไขวันที่ครบวาระไม่แสดง [ซ้ำ]", "issueType": "edit", "status": "cancelled", "relatedApps": "Web Committee", "responsible": "003338", "tester": "T001", "testDate": "2026-07-10", "reportedTime": "08:41", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0044", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "web-ckn-manage", "version": "1.0.72", "issueDescription": "ปรับการแสดงผลแถบเลือกเมนูในโทรศัพท์มือถือ (จำลองสำหรับเจ้าหน้าที่)", "issueType": "improve_display", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T002", "testDate": "2026-07-10", "reportedTime": "08:14", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0043", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "web-ckn-signup", "version": "1.0.17", "issueDescription": "ปรับการแสดงผลแถบเลือกเมนูในโทรศัพท์มือถือ", "issueType": "improve_display", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T002", "testDate": "2026-07-10", "reportedTime": "08:13", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0042", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ข้อมูลบัญชี", "programName": "web-economic", "version": "1.3.1", "issueDescription": "ระบบเศรษฐกิจชุมชน: เพิ่มบัญชีรองรับสูงสุด 2 บัญชี, ปรับปล่อยกู้เลือกบัญชี", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Economic, API Economic", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-09", "reportedTime": "09:30", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0041", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "รายงานสถิติ", "programName": "รายงานและสถิตแสดงรายละเอียดบัญชีคงเหลือ", "version": "1.0.0", "issueDescription": "ปรับ รายงานและสถิตแสดงรายละเอียดบัญชีคงเหลือ [เปิดซ้ำ]", "issueType": "improve_display", "status": "failed", "relatedApps": "Web Economic", "responsible": "รัตนะ", "tester": "T001", "testDate": "2026-07-09", "reportedTime": "09:23", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0040", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ระบบงานการเงิน", "programName": "จัดการข้อมูลการเงิน > เงินปล่อยกู้", "version": "1.0.0", "issueDescription": "ปรับปล่อยกู้เลือกบัญชีสำหรับกู้เงิน [เปิดซ้ำ]", "issueType": "edit", "status": "testing", "relatedApps": "Web Economic", "responsible": "รัตนะ", "tester": "T001", "testDate": "2026-07-09", "reportedTime": "09:23", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0039", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ข้อมูลบัญชี", "programName": "ข้อมูลบัญชี เพิ่มบัญชีรองรับสูงสุด 2 บัญชี", "version": "1.0.0", "issueDescription": "เพิ่มบัญชีรองรับสูงสุด 2 บัญชี [หมายเหตุ: เปิดซ้ำ]", "issueType": "new_feature", "status": "testing", "relatedApps": "Web Economic", "responsible": "รัตนะ", "tester": "T001", "testDate": "2026-07-09", "reportedTime": "09:22", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0038", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "รายงานสถิติ", "programName": "รายงานสมาชิกค้างชำระเงินสงเคราะห์", "version": "1.0.0", "issueDescription": "เปิดเมนู รายงานสมาชิกค้างชำระเงินสงเคราะห์", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-08", "reportedTime": "13:23", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0037", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "บันทึกข้อมูลประกาศราชกิจจาฯ", "programName": "โปรแกรม บันทึกข้อมูลประกาศราชกิจจาฯ แก้ไข การเรียงลำดับรายชื่อ", "version": "1.0.0", "issueDescription": "แก้ไข การเรียงลำดับรายชื่อให้คล้ายกับ พิมพ์ ทถ.2", "issueType": "edit", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-08", "reportedTime": "10:38", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0036", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการเอกสาร", "programName": "สมัครสมาชิกสำหรับเจ้าหน้าที่ แก้ไขปุ่มสแกน", "version": "1.0.0", "issueDescription": "แก้ไขไม่สามารถกดปุ่มสแกนเอกสารได้", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-08", "reportedTime": "08:55", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0035", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการเอกสาร", "programName": "สมัครสมาชิกสำหรับเจ้าหน้าที่ และจัดเก็บเอกสารเพิ่มเติม", "version": "1.0.0", "issueDescription": "แก้ไขกรณีบันทึกข้อมูลแล้วไม่สามารถเชื่อมต่อ linkage ได้", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-07", "reportedTime": "14:00", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0034", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร", "programName": "พิมพ์บัตรประจำตัวกำนันผู้ใหญ่บ้าน", "version": "1.0.0", "issueDescription": "บันทึกใบคำขอมีบัตร เจ้าหน้าที่กดปุ่มบันทึกไม่ได้", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-07", "reportedTime": "13:59", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0033", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "เพิ่มเติมรายชื่อธนาคารของผู้รับผลประโยชน์", "version": "1.0.0", "issueDescription": "เพิ่มเติมรายชื่อธนาคารของผู้รับผลประโยชน์ ให้ครบที่มีอยู่ในประเทศ", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-07", "reportedTime": "10:41", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0032", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการเอกสาร", "programName": "แก้ไขสลับเมนู พิมพ์ใบชำระกับอัปโหลดเอกสาร ระบบ ฌกน.", "version": "1.0.0", "issueDescription": "แก้ไขสลับเมนู พิมพ์ใบชำระ กับ อัปโหลดเอกสาร", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-03", "reportedTime": "08:57", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0031", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ข้อมูลบัญชี", "programName": "ปรับแก้ไขสิทธิ์การแก้ไขและเพิ่มอัปโหลดเอกสาร", "version": "1.0.0", "issueDescription": "ปรับสิทธิ์การแก้ไข เพิ่มอัปโหลดไฟล์เอกสาร", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Economic", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-03", "reportedTime": "08:53", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0030", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "เปลี่ยนชื่อและลายเซ็น ใบต้อนรับสมาชิกในส่วนของหน้าเจ้าหน้าที่", "version": "1.0.0", "issueDescription": "เปลี่ยนชื่อและลายเซ็น ใบต้อนรับสมาชิกในส่วนของหน้าเจ้าหน้าที่", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-02", "reportedTime": "14:33", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0029", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "เปลี่ยนชื่อและลายเซ็น ใบต้อนรับสมาชิก เพิ่ม Link Line", "version": "1.0.0", "issueDescription": "เปลี่ยนชื่อและลายเซ็น ใบต้อนรับสมาชิก, เพิ่ม Link Line", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-07-01", "reportedTime": "16:18", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0028", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "เพิ่มเติมการแสดงใบแจ้งชำระเงิน จากระบบสมัครสมาชิก", "version": "1.0.0", "issueDescription": "เพิ่มเติมการแสดงใบแจ้งชำระเงิน จากระบบสมัครสมาชิก และ ชำระเงินสงเคราะห์รายเดือน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-30", "reportedTime": "16:25", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0027", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "รายงานอัตรากำลัง", "programName": "รายงานอัตรากำลัง เพิ่มปุ่ม พิมพ์ excel", "version": "1.0.0", "issueDescription": "รายงานอัตรากำลัง เพิ่มปุ่ม พิมพ์ excel", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-25", "reportedTime": "15:07", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0026", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "เอกสารดาวน์โหลด", "programName": "เพิ่มแบบฟอร์มดาวน์โหลด คำร้องขอคืนสภาพสมาชิกแบบ pdf", "version": "1.0.0", "issueDescription": "เพิ่มแบบฟอร์มดาวน์โหลด คำร้องขอคืนสภาพสมาชิกแบบ pdf", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-23", "reportedTime": "15:27", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0025", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร", "programName": "แก้ไขวันหมดอายุบัตร ตำแหน่งสารวัติกำนัน", "version": "1.0.0", "issueDescription": "แก้ไขวันหมดอายุบัตร ตำแหน่งสารวัติกำนัน", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-23", "reportedTime": "15:27", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0024", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร,ระบบกิจกรรมรณรงค์", "programName": "ระบบพิมพ์บัตร,ระบบกิจกรรมรณรงค์,lib menu มือถือ", "version": "1.0.0", "issueDescription": "ระบบพิมพ์บัตร ปรับให้ตำแหน่ง กำนัน แพทย์ สารวัติกำนัน ไม่แสดงหมู่บ้าน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-18", "reportedTime": "12:59", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0023", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ระบบงานทั่วไป", "programName": "ปรับระบบการใช้งาน เพิ่ม/แก้ไข เฉพาะหน่วยงานตัวเองเท่านั้น", "version": "1.0.0", "issueDescription": "ปรับระบบการใช้งาน เพิ่ม/แก้ไข เฉพาะหน่วยงานตัวเองเท่านั้น", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Economic", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-16", "reportedTime": "14:36", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0022", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "ปรับหน้าจอ ระบบสมัครสมาชิก ด้วยตนเอง", "version": "1.0.0", "issueDescription": "ปรับหน้าจอ ระบบสมัครสมาชิก ด้วยตนเอง", "issueType": "improve_display", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-16", "reportedTime": "14:36", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0021", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบกิจกรรมรณรงค์", "programName": "ระบบกิจกรรมรณรงค์ เพิ่มตัวเลือกปีปัจจุบัน", "version": "1.0.0", "issueDescription": "ระบบกิจกรรมรณรงค์ เพิ่มตัวเลือกปีปัจจุบัน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-16", "reportedTime": "14:35", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0020", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "แก้ไขหน้าจอสมัครสมาชิก ระบบ ฌกน.", "version": "1.0.0", "issueDescription": "แก้ไขหน้าจอสมัครสมาชิกเพิ่มหน้าจอผู้รับผลประโยชน์", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-12", "reportedTime": "14:37", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0019", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบการเงิน", "programName": "แก้ไขที่อยู่เอกสาร พิมพ์ใบแจ้งยอดค้างชำระ ระบบ ฌกน.", "version": "1.0.0", "issueDescription": "แก้ไขที่อยู่เอกสาร พิมพ์ใบแจ้งยอดค้างชำระ", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-11", "reportedTime": "09:59", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0018", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "แก้ไขโปรแกรมสมัครสมาชิกไม่สามารถบันทึกได้", "version": "1.0.0", "issueDescription": "แก้ไขโปรแกรมสมัครสมาชิกไม่สามารถบันทึกได้", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-10", "reportedTime": "14:28", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0017", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบประเมิน 4 ปี", "programName": "ประเมินผลผู้ใหญ่บ้านแบบ 4 ปี แก้ไขใบพิมพ์ ปผญ1 ตกหน้า2", "version": "1.0.0", "issueDescription": "แก้ไขใบพิมพ์ ปผญ1 ตกหน้า2", "issueType": "edit", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-08", "reportedTime": "09:34", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0016", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบประเมิน 4 ปี", "programName": "การประเมินผลผู้ใหญ่บ้านแบบ 4 ปี แก้ไขโปรแกรมพิมพ์ ปผญ 1 และ 2", "version": "1.0.0", "issueDescription": "แก้ไขโปรแกรมพิมพ์ ปผญ 1 และ 2 ไม่สามารถพิมพ์ได้", "issueType": "edit", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-06-01", "reportedTime": "16:14", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0015", "mainSystem": "ระบบเศรษฐกิจชุมชน", "subSystem": "ระบบงานการเงิน", "programName": "ปรับแก้ไขข้อความและ เพิ่มชื่อผู้กู้ เบอร์โทร ระบบปล่อยเงินกู้", "version": "1.0.0", "issueDescription": "ระบบเศรษฐกิจชุมชน ปรับแก้ไขข้อความและ เพิ่มชื่อผู้กู้ เบอร์โทร ระบบปล่อยเงินกู้", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Economic", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-29", "reportedTime": "11:00", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0014", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบสมัครสมาชิกออนไลน์", "programName": "เพิ่มหน้าจอสมัครสมาชิกด้วยตนเอง ให้กรอกข้อมูลผู้รับผลประโยชน์ได้", "version": "1.0.0", "issueDescription": "เพิ่มหน้าจอสมัครสมาชิกด้วยตนเอง ให้กรอกข้อมูลผู้รับผลประโยชน์ได้", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Signup", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-26", "reportedTime": "13:43", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0013", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร", "programName": "แก้ไข lib ติดต่อเครื่องพิมพ์บัตร", "version": "1.0.0", "issueDescription": "ระบบพิมพ์บัตร แก้ไข lib ติดต่อเครื่องพิมพ์บัตร", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-25", "reportedTime": "11:05", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0012", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบงานพิมพ์", "programName": "สน13-19", "version": "1.0.0", "issueDescription": "แก้ไขพิมพ์แบบฟอร์ม สน13-19 ตำแหน่งตกบรรทัด", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-22", "reportedTime": "14:43", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0011", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "รายงานสถิติ", "programName": "แก้ไขรายงาน บัญชีการเสียชีวิต/พ้นสถาพของสมาชิก แสดงอายุผิด", "version": "1.0.0", "issueDescription": "แก้ไขรายงาน บัญชีการเสียชีวิต/พ้นสถาพของสมาชิก แสดงอายุผิด", "issueType": "edit", "status": "installed", "relatedApps": "Web Ckn Dashboard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-21", "reportedTime": "08:29", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0010", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบพิมพ์บัตร", "programName": "แก้ไข api กรณีรับรหัสผู้ลงลายมือชื่อ เกิน 3 หลัก", "version": "1.0.0", "issueDescription": "แก้ไข api กรณีรับรหัสผู้ลงลายมือชื่อ เกิน 3 หลัก", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-18", "reportedTime": "11:33", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0009", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "ระบบจัดการสมาชิก", "programName": "เพิ่มข้อมูล เบอร์โทร เลขที่บัญชี สำหรับผู้รับผลรับโยชน์", "version": "1.0.0", "issueDescription": "เพิ่มข้อมูล เบอร์โทร เลขที่บัญชี สำหรับผู้รับผลรับโยชน์", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-15", "reportedTime": "15:30", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0008", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบประเมิน 4 ปี", "programName": "ปรับปรุง ระบบประเมิน 4 ปี แบบพิมพ์ ปผญ.5", "version": "1.0.0", "issueDescription": "แก้ไขข้อความกรณี ถ้าผ่านการประเมิน และ ไม่ผ่านการประเมิน", "issueType": "edit", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-12", "reportedTime": "15:57", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0007", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบงานพิมพ์", "programName": "แก้ไขโปรแกรมพิมพ์ สน.12 สาเหตุการตาย ขึ้นเป็นเลข 0", "version": "1.0.0", "issueDescription": "แก้ไขโปรแกรมพิมพ์ สน12 สาเหตุการตาย ขึ้นเลข ๐", "issueType": "edit", "status": "installed", "relatedApps": "Web Printcard", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-11", "reportedTime": "16:46", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0006", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "รายงานและสถิติ", "programName": "เพิ่มรายงานรายงานผู้เข้าอบรมหลักสูตรกำนันผู้ใหญ่บ้านฯ", "version": "1.0.0", "issueDescription": "เพิ่มรายงานรายงานผู้เข้าอบรมหลักสูตรกำนันผู้ใหญ่บ้านฯ", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-11", "reportedTime": "15:38", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0005", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ตรวจสอบข้อมูลทะเบียนประวัติ", "programName": "ข้อมูลผู้ที่ปฏิบัติหน้าที่ เพิ่มเมนู ตรวจสอบข้อมูลทะเบียนประวัติ", "version": "1.0.0", "issueDescription": "เพิ่มเมนู ตรวจสอบข้อมูลทะเบียนประวัติ ระบบกำนัน", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-08", "reportedTime": "17:43", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0004", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบเครื่องราชอิสริยาภรณ์", "programName": "โปรแกรมตรวจสอบรายชื่อผู้ที่เคยรับเครื่องราช", "version": "1.0.0", "issueDescription": "แก้ไขรายงานไม่ให้แสดงรายชื่อที่ถูกถอดถอน", "issueType": "edit", "status": "installed", "relatedApps": "Web Insignia", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-07", "reportedTime": "15:30", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0003", "mainSystem": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subSystem": "จัดการข้อมูลเสียชีวิต", "programName": "ระบบฌาปนกิจสงเคราะห์ เมนูจัดการข้อมู้เสียชีวิต จัดเตรียมใบประกาศ", "version": "1.0.0", "issueDescription": "แก้ไข เลขที่ประกาศ ไม่ให้บวกเลขเพิ่ม", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Ckn Manage", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-07", "reportedTime": "12:14", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0002", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "บันทึกข้อมูล กม.", "programName": "web-committee", "version": "1.0.15", "issueDescription": "ปรับเพิ่มเงื่อนไขกรณีที่เลือกเป็น ผู้นำ/ผู้แทนกลุ่ม ให้กำหนดค่าวันที่ครบวาระเป็น 12/12/9999", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Committee", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-06", "reportedTime": "10:36", "notes": "", "attachments": [], "createdAt": null}, {"id": "QC-2026-0001", "mainSystem": "ระบบกำนันผู้ใหญ่บ้าน", "subSystem": "ระบบเครื่องราชอิสริยาภรณ์", "programName": "โปรแกรมถอนชื่อจากการเสนอ ขอเพิ่มปี พ.ศ. ที่เลือกขอพระราชทานเครื่องราชฯ", "version": "1.0.0", "issueDescription": "ขอเพิ่มปี พ.ศ. ที่เลือกขอพระราชทานเครื่องราชฯ ตั้งแต่ปี 2565 ถึง ปีล่าสุดที่มีการขอเครื่องราชฯ", "issueType": "new_feature", "status": "installed", "relatedApps": "Web Insignia", "responsible": "ชรินทร์", "tester": "T001", "testDate": "2026-05-05", "reportedTime": "16:43", "notes": "", "attachments": [], "createdAt": null}];
-const DEFAULT_TESTERS = [{"id": "T001", "name": "รัตนะ", "username": "tester01", "email": "", "role": "QC Tester", "department": "Quality Assurance", "active": true, "notes": "Imported from QC_Tracking file — please complete username/email."}, {"id": "T002", "name": "เสววลักษณ์", "username": "tester02", "email": "", "role": "QC Tester", "department": "Quality Assurance", "active": true, "notes": "Imported from QC_Tracking file — please complete username/email."}];
+const DEFAULT_TESTERS = [{"id": "T001", "name": "รัตนะ", "username": "tester01", "email": "", "role": "QC Tester", "accessRole": "tester", "department": "Quality Assurance", "active": true, "notes": "Imported from QC_Tracking file — please complete username/email."}, {"id": "T002", "name": "เสววลักษณ์", "username": "tester02", "email": "", "role": "QC Tester", "accessRole": "tester", "department": "Quality Assurance", "active": true, "notes": "Imported from QC_Tracking file — please complete username/email."}];
 const DEFAULT_SYSTEMS = [{"id": "SYS01", "name": "ระบบฌาปนกิจสงเคราะห์กำนันผู้ใหญ่บ้าน", "subs": [{"id": "SYS01-1", "name": "รายงานแดชบอร์ด"}, {"id": "SYS01-2", "name": "ระบบจัดการสมาชิก"}, {"id": "SYS01-3", "name": "ระบบสมัครสมาชิกออนไลน์"}, {"id": "SYS01-4", "name": "บันทึกข้อมูลคณะกรรมการหมู่บ้าน"}, {"id": "SYS01-5", "name": "รายงานสถิติ"}, {"id": "SYS01-6", "name": "ระบบจัดการเอกสาร"}, {"id": "SYS01-7", "name": "เอกสารดาวน์โหลด"}, {"id": "SYS01-8", "name": "ระบบการเงิน"}, {"id": "SYS01-9", "name": "จัดการข้อมูลเสียชีวิต"}]}, {"id": "SYS02", "name": "ระบบกำนันผู้ใหญ่บ้าน", "subs": [{"id": "SYS02-1", "name": "ระบบเครื่องราชฯ"}, {"id": "SYS02-2", "name": "ระบบพิมพ์บัตร"}, {"id": "SYS02-3", "name": "บันทึกข้อมูลคณะกรรมการหมู่บ้าน"}, {"id": "SYS02-4", "name": "บันทึกข้อมูลประกาศราชกิจจาฯ"}, {"id": "SYS02-5", "name": "รายงานอัตรากำลัง"}, {"id": "SYS02-6", "name": "ระบบพิมพ์บัตร,ระบบกิจกรรมรณรงค์"}, {"id": "SYS02-7", "name": "ระบบกิจกรรมรณรงค์"}, {"id": "SYS02-8", "name": "ระบบประเมิน 4 ปี"}, {"id": "SYS02-9", "name": "ระบบงานพิมพ์"}, {"id": "SYS02-10", "name": "รายงานและสถิติ"}, {"id": "SYS02-11", "name": "ตรวจสอบข้อมูลทะเบียนประวัติ"}, {"id": "SYS02-12", "name": "ระบบเครื่องราชอิสริยาภรณ์"}, {"id": "SYS02-13", "name": "บันทึกข้อมูล กม."}]}, {"id": "SYS03", "name": "ระบบเศรษฐกิจชุมชน", "subs": [{"id": "SYS03-1", "name": "ข้อมูลบัญชี"}, {"id": "SYS03-2", "name": "รายงานสถิติ"}, {"id": "SYS03-3", "name": "ระบบงานการเงิน"}, {"id": "SYS03-4", "name": "ระบบงานทั่วไป"}]}];
 
 function computeNextSeq(records){
@@ -767,6 +894,13 @@ const state = {
   lang:'th',
   route:{ name:'dashboard', param:null },
   sidebarOpen:false,
+  session:null,
+  accessRole:null,
+  currentTester:null,
+  authMode:'login',
+  authEmail:'',
+  authError:'',
+  authBusy:false,
   statuses: JSON.parse(JSON.stringify(DEFAULT_STATUSES)),
   testers: JSON.parse(JSON.stringify(DEFAULT_TESTERS)),
   systems: JSON.parse(JSON.stringify(DEFAULT_SYSTEMS)),
@@ -845,6 +979,18 @@ window.addEventListener('hashchange', ()=>{
 function render(){
   try{
     const app = document.getElementById('app');
+    if(!state.session){
+      app.innerHTML = authShellHTML();
+      attachGlobalEvents();
+      renderToasts();
+      return;
+    }
+    if(state.accessRole==='pending'){
+      app.innerHTML = pendingApprovalHTML();
+      attachGlobalEvents();
+      renderToasts();
+      return;
+    }
     app.innerHTML = shellHTML();
     mountTopChrome();
     renderPage();
@@ -852,7 +998,7 @@ function render(){
     renderToasts();
     attachGlobalEvents();
     scheduleAutosave();
-    scheduleSupaSync();
+    if(state.accessRole==='admin') scheduleSupaSync();
   }catch(err){
     console.error(err);
     document.getElementById('app').innerHTML =
@@ -863,6 +1009,12 @@ function render(){
 }
 
 function navGroups(){
+  if(state.accessRole!=='admin'){
+    return [
+      {group:t('nav.groupOverview'), items:[ {id:'dashboard', label:t('nav.dashboard'), icon:'dashboard'} ]},
+      {group:t('nav.groupOps'), items:[ {id:'records', label:t('nav.records'), icon:'records'} ]},
+    ];
+  }
   return [
     {group:t('nav.groupOverview'), items:[ {id:'dashboard', label:t('nav.dashboard'), icon:'dashboard'} ]},
     {group:t('nav.groupOps'), items:[
@@ -904,6 +1056,10 @@ function shellHTML(){
         <span class="mono" style="font-size:11px;color:var(--text-faint)">toggle</span>
       </button>
       ${syncIndicatorHTML()}
+      <button class="theme-toggle" data-action="logout" title="${esc(t('auth.logout'))}">
+        <span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((state.currentTester&&(state.currentTester.name||state.currentTester.email))||'')}</span>
+        <span class="mono" style="font-size:11px;color:var(--text-faint)">${esc(t('auth.logout'))}</span>
+      </button>
     </div>
   </div>
   <div class="sidebar-scrim ${state.sidebarOpen?'show':''}" data-action="close-sidebar"></div>
@@ -959,6 +1115,9 @@ function monthSelectHTML(value, action, includeAll){
 }
 
 function renderPage(){
+  if(state.accessRole!=='admin' && !['dashboard','records'].includes(state.route.name)){
+    state.route = {name:'dashboard', param:null};
+  }
   const c = document.getElementById('content');
   switch(state.route.name){
     case 'records': c.innerHTML = recordsPage(); afterRecordsRender(); break;
@@ -1211,7 +1370,7 @@ function recordsPage(){
   <div class="table-toolbar">
     <div class="search-box">${ICONS.search}<input type="text" placeholder="${esc(t('records.searchPh'))}" value="${esc(u.search)}" data-bind="records.search"></div>
     <div style="flex:1"></div>
-    <button class="btn btn-primary" data-action="add-record">${ICONS.plus} ${esc(t('common.addRecord'))}</button>
+    ${state.accessRole==='admin' ? `<button class="btn btn-primary" data-action="add-record">${ICONS.plus} ${esc(t('common.addRecord'))}</button>` : ''}
   </div>
 
   <div class="filter-bar">
@@ -1767,6 +1926,7 @@ function renderModal(){
   const m = state.modal;
   let html='';
   if(m.type==='recordForm') html = recordFormModal(m.data);
+  else if(m.type==='recordStatusForm') html = recordStatusFormModal(m.data);
   else if(m.type==='recordDetail') html = recordDetailModal(m.data);
   else if(m.type==='sendTester') html = sendTesterModal(m.data);
   else if(m.type==='testerForm') html = testerFormModal(m.data);
@@ -1871,11 +2031,42 @@ function recordDetailModal(r){
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-danger" data-action="delete-record" data-id="${esc(r.id)}">${ICONS.trash} ${esc(t('common.delete'))}</button>
+      ${state.accessRole==='admin' ? `<button class="btn btn-danger" data-action="delete-record" data-id="${esc(r.id)}">${ICONS.trash} ${esc(t('common.delete'))}</button>` : ''}
       <div style="flex:1"></div>
       <button class="btn" data-action="copy-link" data-id="${esc(r.id)}">${ICONS.link} ${esc(t('records.copyLink'))}</button>
       <button class="btn" data-action="send-tester" data-id="${esc(r.id)}">${ICONS.mail} ${esc(t('records.sendTester'))}</button>
       <button class="btn btn-primary" data-action="edit-record" data-id="${esc(r.id)}">${ICONS.edit} ${esc(t('common.edit'))}</button>
+    </div>
+  </div>`;
+}
+
+function recordStatusFormModal(data){
+  const r = data.record;
+  const errors = data.errors || {};
+  return `
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 class="mono">${esc(r.id)}</h2><p>${esc(r.programName)}</p></div>
+      <button class="btn btn-ghost icon-btn" data-action="close-modal">${ICONS.x}</button>
+    </div>
+    <div id="record-status-form">
+    <div class="modal-body">
+      <div class="detail-grid" style="margin-bottom:14px">
+        <div class="detail-item"><label>${esc(t('detail.programName'))}</label><div class="val">${esc(r.programName)||'—'}</div></div>
+        <div class="detail-item"><label>${esc(t('form.mainSystem'))}</label><div class="val">${esc(r.mainSystem)}${r.subSystem?' / '+esc(r.subSystem):''}</div></div>
+        <div class="detail-item full"><label>${esc(t('detail.issueDesc'))}</label><div class="val">${esc(r.issueDescription)}</div></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field full"><label>${esc(t('form.testStatus'))} <span class="req">*</span></label>
+          <select name="status">${state.statuses.map(s=>`<option value="${esc(s.id)}" ${r.status===s.id?'selected':''}>${esc(statusLabel(s))}</option>`).join('')}</select>
+          ${fieldError(errors,'status')}
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" data-action="close-modal">${esc(t('common.cancel'))}</button>
+      <button type="button" class="btn btn-primary" data-action="save-record-status">${esc(t('common.save'))}</button>
+    </div>
     </div>
   </div>`;
 }
@@ -1949,6 +2140,12 @@ function testerFormModal(data){
         <div class="form-field"><label>${esc(t('tester.username'))} <span class="req">*</span></label><input name="username" value="${esc(x.username)}" required>${fieldError(errors,'username')}</div>
         <div class="form-field"><label>${esc(t('tester.email'))}</label><input type="email" name="email" value="${esc(x.email)}"></div>
         <div class="form-field"><label>${esc(t('tester.role'))}</label><input name="role" value="${esc(x.role)}"></div>
+        <div class="form-field"><label>${esc(t('tester.accessRole'))}</label>
+          <select name="accessRole">
+            <option value="tester" ${x.accessRole!=='admin'?'selected':''}>${esc(t('tester.accessRoleTester'))}</option>
+            <option value="admin" ${x.accessRole==='admin'?'selected':''}>${esc(t('tester.accessRoleAdmin'))}</option>
+          </select>
+        </div>
         <div class="form-field"><label>${esc(t('tester.department'))}</label><input name="department" value="${esc(x.department)}"></div>
         <div class="form-field"><label>${esc(t('tester.status'))}</label>
           <select name="active"><option value="true" ${x.active?'selected':''}>${esc(t('common.active'))}</option><option value="false" ${!x.active?'selected':''}>${esc(t('common.inactive'))}</option></select>
@@ -2193,6 +2390,7 @@ function openAddRecord(){
   render();
 }
 function openEditRecord(id){ const r=findRecord(id); if(!r) return; state.modal={type:'recordForm', data:{record:JSON.parse(JSON.stringify(r)), isEdit:true, errors:{}}}; render(); }
+function openEditRecordStatus(id){ const r=findRecord(id); if(!r) return; state.modal={type:'recordStatusForm', data:{record:JSON.parse(JSON.stringify(r)), errors:{}}}; render(); }
 function openDetail(id){ const r=findRecord(id); if(!r) return; state.modal={type:'recordDetail', data:r}; render(); safeSetHash('#/records/'+encodeURIComponent(id)); }
 function closeModalAndClearHash(){
   state.modal=null;
@@ -2200,6 +2398,10 @@ function closeModalAndClearHash(){
   try{ if(location.hash.startsWith('#/records/')) safeSetHash('#/records'); }catch(e){}
 }
 
+function captureAuthFormIntoState(){
+  const el = document.getElementById('auth-email');
+  if(el) state.authEmail = el.value;
+}
 function captureRecordFormIntoState(){
   // Attachment add/remove triggers a re-render of the whole Add/Edit modal; without
   // this, any text the user already typed into other fields (not yet saved) would
@@ -2227,6 +2429,29 @@ const actions = {
   'close-sidebar'(){ state.sidebarOpen=false; render(); },
   'toggle-theme'(){ state.theme = state.theme==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', state.theme); render(); },
   'set-lang'(btn){ state.lang = btn.dataset.lang; render(); },
+  'toggle-auth-mode'(){ captureAuthFormIntoState(); state.authMode = state.authMode==='signup'?'login':'signup'; state.authError=''; render(); },
+  async 'submit-login'(){
+    captureAuthFormIntoState();
+    if(!supa){ state.authError=t('auth.genericError'); render(); return; }
+    const password = document.getElementById('auth-password')?.value||'';
+    if(!state.authEmail || !password){ state.authError=t('auth.required'); render(); return; }
+    state.authBusy=true; state.authError=''; render();
+    const { error } = await supa.auth.signInWithPassword({ email:state.authEmail, password });
+    state.authBusy=false;
+    if(error){ state.authError = error.message || t('auth.genericError'); render(); }
+  },
+  async 'submit-signup'(){
+    captureAuthFormIntoState();
+    if(!supa){ state.authError=t('auth.genericError'); render(); return; }
+    const password = document.getElementById('auth-password')?.value||'';
+    if(!state.authEmail || !password){ state.authError=t('auth.required'); render(); return; }
+    state.authBusy=true; state.authError=''; render();
+    const { error } = await supa.auth.signUp({ email:state.authEmail, password });
+    state.authBusy=false;
+    if(error){ state.authError = error.message || t('auth.genericError'); render(); return; }
+    state.authMode='login'; toast(t('auth.signupDone'),'success'); render();
+  },
+  async 'logout'(){ if(supa) await supa.auth.signOut(); },
   'dashboard-month'(sel){ state.ui.dashboardMonth = sel.value; render(); },
   'report-month'(sel){ state.ui.reportMonth = sel.value; render(); },
   async 'export-report'(){
@@ -2244,7 +2469,7 @@ const actions = {
   'modal-noop'(){ /* swallow clicks on empty modal space without blocking bubbling of real actions */ },
   'add-record'(){ openAddRecord(); },
   'open-detail'(btn){ openDetail(btn.dataset.id); },
-  'edit-record'(btn){ openEditRecord(btn.dataset.id); },
+  'edit-record'(btn){ if(state.accessRole==='admin') openEditRecord(btn.dataset.id); else openEditRecordStatus(btn.dataset.id); },
   'record-mainsystem-change'(sel){
     captureRecordFormIntoState();
     state.modal.data.record.mainSystem = sel.value;
@@ -2432,6 +2657,7 @@ const actions = {
     if(d && typeof d.onConfirm==='function'){ const r=d.onConfirm(); if(r===false) return; }
   },
   'save-record'(){ submitRecordForm(document.getElementById('record-form')); },
+  'save-record-status'(){ submitTesterStatusUpdate(document.getElementById('record-status-form')); },
   'save-tester'(){ submitTesterForm(document.getElementById('tester-form')); },
   'save-status'(){ submitStatusForm(document.getElementById('status-form')); },
   'save-system'(){ submitSystemForm(document.getElementById('system-form')); },
@@ -2488,8 +2714,13 @@ function attachGlobalEvents(){
   };
   document.onkeydown = e=>{
     if(e.key==='Escape' && state.modal) { closeModalAndClearHash(); return; }
-    if(e.key==='Enter' && state.modal && e.target.tagName==='INPUT'){
-      const saveActionByModal = { recordForm:'save-record', testerForm:'save-tester', statusForm:'save-status', systemForm:'save-system', subSystemForm:'save-subsystem' };
+    if(e.key==='Enter' && !state.session && e.target.tagName==='INPUT'){
+      e.preventDefault();
+      actions[state.authMode==='signup'?'submit-signup':'submit-login']();
+      return;
+    }
+    if(e.key==='Enter' && state.modal && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')){
+      const saveActionByModal = { recordForm:'save-record', recordStatusForm:'save-record-status', testerForm:'save-tester', statusForm:'save-status', systemForm:'save-system', subSystemForm:'save-subsystem' };
       const actionName = saveActionByModal[state.modal.type];
       if(actionName){ e.preventDefault(); actions[actionName](); }
     }
@@ -2524,6 +2755,19 @@ function submitRecordForm(form){
     toast(t('toast.recCreated')(id),'success');
   }
   state.modal=null; render();
+}
+
+async function submitTesterStatusUpdate(form){
+  const data = collectFields(form);
+  if(!data.status){ state.modal.data.errors={status:t('form.testStatus')+' '+t('form.required')}; render(); return; }
+  const id = state.modal.data.record.id;
+  const r = findRecord(id);
+  if(!r) return;
+  r.status = data.status;
+  state.modal = null; render();
+  const { error } = await pushTesterStatusUpdate(id, data.status);
+  if(error){ toast(t('auth.genericError'),'error'); }
+  else toast(t('toast.recUpdated')(id),'success');
 }
 
 function submitTesterForm(form){
@@ -2735,30 +2979,31 @@ async function init(){
   resolveDeepLink();
   render();
 
-  // Phase 3: try upgrading to the shared live database. Failure here is completely
-  // safe — the app just stays on the local-only data from Phase 2.
+  // Phase 3: connect to Supabase Auth. Signing in (or restoring a session) is what
+  // unlocks the shared live database — see loadSharedDataForCurrentSession() and the
+  // render() gate, which shows a login screen whenever state.session is empty.
   try{
     supa = initSupabaseClient();
     if(supa){
-      await withTimeout((async()=>{
-        await supaSeedIfEmpty();
-        const remote = await supaPullAll();
-        state.records = remote.records;
-        state.testers = remote.testers;
-        state.statuses = remote.statuses.length ? remote.statuses : state.statuses;
-        state.systems = remote.systems;
-      })(), 6000);
-      state.nextSeq = Math.max(state.nextSeq, computeNextSeq(state.records));
-      lastSyncedIds.qc_records = new Set(state.records.map(r=>r.id));
-      lastSyncedIds.testers = new Set(state.testers.map(t=>t.id));
-      lastSyncedIds.statuses = new Set(state.statuses.map(s=>s.id));
-      lastSyncedIds.systems = new Set(state.systems.map(s=>s.id));
-      lastSyncedIds.sub_systems = new Set(state.systems.flatMap(s=>s.subs.map(x=>x.id)));
-      lastPushedSnapshot = snapshotOfSharedState();
-      state.syncMode = 'online';
-      resolveDeepLink();
+      let firstAuthSeen = false;
+      let resolveFirstAuth;
+      const firstAuthPromise = new Promise(res=>{ resolveFirstAuth = res; });
+      supa.auth.onAuthStateChange((event, session)=>{
+        state.session = session || null;
+        if(state.session){
+          resolveAccessForSession(state.session);
+          loadSharedDataForCurrentSession()
+            .then(()=>ensureTesterStubExists(state.session))
+            .then(()=>{ resolveDeepLink(); render(); });
+        } else {
+          state.accessRole = null;
+          state.currentTester = null;
+          render();
+        }
+        if(!firstAuthSeen){ firstAuthSeen = true; resolveFirstAuth(); }
+      });
+      await withTimeout(firstAuthPromise, 6000);
       render();
-      subscribeRealtime();
     }
   }catch(e){
     console.warn('Supabase unreachable — staying on local-only data.', e && e.message);
