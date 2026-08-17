@@ -50,7 +50,7 @@ const I18N = {
       switchToSignup:'Sign up', switchToLogin:'Sign in',
       logout:'Sign out',
       genericError:'Something went wrong. Please try again.',
-      signupDone:'Account created. Check your email if confirmation is required, then sign in.',
+      signupDone:'Account created! Check your inbox and click the confirmation link in the email before signing in.',
       pendingTitle:'Waiting for approval', pendingBody:'Your account has been created but is not active yet. Please ask an admin to activate your access.',
       required:'Email and password are required.',
     },
@@ -177,7 +177,7 @@ const I18N = {
       switchToSignup:'สมัครสมาชิก', switchToLogin:'เข้าสู่ระบบ',
       logout:'ออกจากระบบ',
       genericError:'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
-      signupDone:'สร้างบัญชีสำเร็จ กรุณายืนยันอีเมล (ถ้าจำเป็น) แล้วเข้าสู่ระบบ',
+      signupDone:'สร้างบัญชีสำเร็จ! กรุณาเข้าไปเช็คอีเมลของคุณ แล้วกดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ',
       pendingTitle:'รอการอนุมัติ', pendingBody:'สร้างบัญชีของคุณแล้ว แต่ยังไม่เปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดสิทธิ์การใช้งาน',
       required:'กรุณากรอกอีเมลและรหัสผ่าน',
     },
@@ -545,6 +545,7 @@ function authShellHTML(){
       </div>
       <h2 style="margin:0 0 4px">${esc(isSignup? t('auth.signupTitle') : t('auth.loginTitle'))}</h2>
       <div id="auth-form" style="margin-top:14px">
+        ${state.authNotice? `<div class="helper-banner">${ICONS.mail}<div>${esc(state.authNotice)}</div></div>` : ''}
         <div class="form-grid">
           <div class="form-field full"><label>${esc(t('auth.email'))}</label><input type="email" name="email" id="auth-email" placeholder="${esc(t('auth.emailPh'))}" value="${esc(state.authEmail||'')}"></div>
           <div class="form-field full"><label>${esc(t('auth.password'))}</label><input type="password" name="password" id="auth-password" placeholder="${esc(t('auth.passwordPh'))}"></div>
@@ -900,6 +901,7 @@ const state = {
   authMode:'login',
   authEmail:'',
   authError:'',
+  authNotice:'',
   authBusy:false,
   statuses: JSON.parse(JSON.stringify(DEFAULT_STATUSES)),
   testers: JSON.parse(JSON.stringify(DEFAULT_TESTERS)),
@@ -956,6 +958,15 @@ function recordsForMonth(mk){
 }
 
 /* ---------------- Router ---------------- */
+// Supabase email links (confirm signup, magic link, password recovery) redirect
+// back here with auth tokens stuffed into the URL hash — which collides with
+// this app's own hash-based routing. Strip those before our router (or the
+// user) ever sees them.
+function cleanAuthHashFromUrl(){
+  if(/access_token=|refresh_token=|type=(signup|recovery|invite|magiclink)/.test(location.hash)){
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  }
+}
 function parseHash(){
   const h = location.hash.replace(/^#\/?/, '');
   const parts = h.split('/').filter(Boolean);
@@ -2429,7 +2440,7 @@ const actions = {
   'close-sidebar'(){ state.sidebarOpen=false; render(); },
   'toggle-theme'(){ state.theme = state.theme==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', state.theme); render(); },
   'set-lang'(btn){ state.lang = btn.dataset.lang; render(); },
-  'toggle-auth-mode'(){ captureAuthFormIntoState(); state.authMode = state.authMode==='signup'?'login':'signup'; state.authError=''; render(); },
+  'toggle-auth-mode'(){ captureAuthFormIntoState(); state.authMode = state.authMode==='signup'?'login':'signup'; state.authError=''; state.authNotice=''; render(); },
   async 'submit-login'(){
     captureAuthFormIntoState();
     if(!supa){ state.authError=t('auth.genericError'); render(); return; }
@@ -2439,6 +2450,7 @@ const actions = {
     const { error } = await supa.auth.signInWithPassword({ email:state.authEmail, password });
     state.authBusy=false;
     if(error){ state.authError = error.message || t('auth.genericError'); render(); }
+    else { state.authNotice=''; }
   },
   async 'submit-signup'(){
     captureAuthFormIntoState();
@@ -2446,10 +2458,16 @@ const actions = {
     const password = document.getElementById('auth-password')?.value||'';
     if(!state.authEmail || !password){ state.authError=t('auth.required'); render(); return; }
     state.authBusy=true; state.authError=''; render();
-    const { error } = await supa.auth.signUp({ email:state.authEmail, password });
+    const { error } = await supa.auth.signUp({
+      email:state.authEmail, password,
+      options:{ emailRedirectTo: location.origin + location.pathname },
+    });
     state.authBusy=false;
     if(error){ state.authError = error.message || t('auth.genericError'); render(); return; }
-    state.authMode='login'; toast(t('auth.signupDone'),'success'); render();
+    state.authMode='login';
+    state.authNotice = t('auth.signupDone');
+    toast(t('auth.signupDone'),'success');
+    render();
   },
   async 'logout'(){ if(supa) await supa.auth.signOut(); },
   'dashboard-month'(sel){ state.ui.dashboardMonth = sel.value; render(); },
@@ -2991,6 +3009,8 @@ async function init(){
       supa.auth.onAuthStateChange((event, session)=>{
         state.session = session || null;
         if(state.session){
+          cleanAuthHashFromUrl();
+          state.route = parseHash();
           resolveAccessForSession(state.session);
           loadSharedDataForCurrentSession()
             .then(()=>ensureTesterStubExists(state.session))
